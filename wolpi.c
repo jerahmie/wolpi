@@ -12,7 +12,7 @@
 #define UDP_PORT 9
 #define MAC_BCASTS 16  // number of times to transmit MAC address in magic pkt
 #define LEN_MAC_ADDR_WITH_SPACERS 17
-#define LEN_MAC_ADDR_STR 22
+#define MAC_LEN 6      // number of bytes (char) in MAC address
 
 /*
  * \fn magic_packet
@@ -49,10 +49,12 @@ int main(int argc, char *argv[])
   int i,j, status;
   struct sockaddr_in bcast_addr;
   int sock_val = 1;
-  uint8_t *mac_addr, *message; 
+  uint8_t mac_addr[MAC_LEN]; 
+  uint8_t *message; 
   char *mac_addr_str, *mac_addr_str_head;
   const uint message_chars = (1 + MAC_BCASTS) * 6;
 
+  
   // Process MAC address pass in as command line argument.
   if (argc != 2)
     {
@@ -62,30 +64,18 @@ int main(int argc, char *argv[])
 
   if (strlen(argv[1]) == LEN_MAC_ADDR_WITH_SPACERS)
     {
-      mac_addr_str_head = (char *)malloc(sizeof(char)*LEN_MAC_ADDR_STR);
-      memset(mac_addr_str_head, '\0', sizeof(char)*LEN_MAC_ADDR_STR);
-      mac_addr_str = mac_addr_str_head;
-      for (i=0; i<strlen(argv[1]); i++)
+      for (i=0; i<MAC_LEN; i++)
         {
-          if ( *(argv[1]+i) == ':' )
-            {
-              *mac_addr_str = '\\';
-              mac_addr_str++;
-              *mac_addr_str = 'x';
-              mac_addr_str++;
-            }
-          else
-            {
-              *mac_addr_str = *(argv[1]+i);
-              mac_addr_str++;
-            }
+          j = i*3; 
+          char temp_str[6] = {'0', 'x', *(argv[1] + j*sizeof(char)), 
+                              *(argv[1] + (j+1)*sizeof(char)), 0};
+          mac_addr[i] = strtol(temp_str, NULL, 0);
         }
-      printf("%s\n", mac_addr_str_head);
     }
-
-  mac_addr = (uint8_t *)malloc(sizeof(uint8_t)*6);
-  memcpy( mac_addr, mac_addr_str_head, 6);
-  //  memcpy( mac_addr, "\x00\x1b\x63\x99\xf5\xcd", 6);
+ else 
+   {
+     usage();
+   }
 
   memset(&bcast_addr, 0, sizeof(bcast_addr));
 
@@ -99,8 +89,7 @@ int main(int argc, char *argv[])
   status = sendto(s1, message, sizeof(uint8_t)*6*(1+MAC_BCASTS), 0, 
                   (struct sockaddr *) &bcast_addr, sizeof(bcast_addr));
 
-  free(mac_addr);
   free(message);
-  free(mac_addr_str_head);
-  return 0;
+  
+return 0;
 }
